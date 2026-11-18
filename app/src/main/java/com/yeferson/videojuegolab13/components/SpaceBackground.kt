@@ -1,7 +1,5 @@
 package com.yeferson.videojuegolab13.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -34,9 +32,10 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
 import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.game.GamePhase
-import com.yeferson.videojuegolab13.game.sectorAt
 import com.yeferson.videojuegolab13.ui.theme.Bermellon
+import com.yeferson.videojuegolab13.ui.theme.Cobalto
 import com.yeferson.videojuegolab13.ui.theme.Hueso
+import com.yeferson.videojuegolab13.ui.theme.Noche
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -51,21 +50,6 @@ private class Star(val x: Float, val y: Float, val layer: Int, val phase: Float)
 @Composable
 fun SpaceBackground(engine: GameEngine, modifier: Modifier = Modifier) {
     val inMenu = engine.phase == GamePhase.MENU
-    val sector = sectorAt(engine.sectorIndex)
-
-    // El cielo cambia suavemente de color al entrar a cada sector
-    val skyTop by animateColorAsState(
-        targetValue = Color(sector.skyTop),
-        animationSpec = tween(1800, easing = FastOutSlowInEasing),
-        label = "cieloSuperior"
-    )
-    val skyBottom by animateColorAsState(
-        targetValue = Color(sector.skyBottom),
-        animationSpec = tween(1800, easing = FastOutSlowInEasing),
-        label = "cieloInferior"
-    )
-
-    // Animaciones que se repiten sin parar: brillo de estrellas y giro de los rayos
     val transition = rememberInfiniteTransition(label = "espacio")
     val twinkle by transition.animateFloat(
         initialValue = 0f,
@@ -86,7 +70,6 @@ fun SpaceBackground(engine: GameEngine, modifier: Modifier = Modifier) {
         label = "opacidadRayos"
     )
 
-    // El planeta baja y sale de la pantalla cuando la nave despega
     val planetDrop by animateDpAsState(
         targetValue = if (inMenu) 0.dp else 520.dp,
         animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessVeryLow),
@@ -103,7 +86,7 @@ fun SpaceBackground(engine: GameEngine, modifier: Modifier = Modifier) {
 
     Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(Brush.verticalGradient(listOf(skyTop, skyBottom)))
+            drawRect(Brush.verticalGradient(listOf(Cobalto, Noche)))
             if (raysAlpha > 0.01f) drawRays(rayPath, rayAngle, raysAlpha)
             drawStars(stars, engine.scroll, engine.scrollSpeed, twinkle)
         }
@@ -118,7 +101,6 @@ fun SpaceBackground(engine: GameEngine, modifier: Modifier = Modifier) {
     }
 }
 
-// Rayos al estilo de los carteles antiguos, centrados en la nave del menú
 private fun DrawScope.drawRays(path: Path, angle: Float, alpha: Float) {
     val center = Offset(size.width * 0.62f, size.height * 0.5f)
     val radius = hypot(size.width, size.height)
@@ -156,7 +138,6 @@ private fun DrawScope.drawStars(stars: List<Star>, scroll: Float, speed: Float, 
                 cap = StrokeCap.Round
             )
         } else if (star.layer == 2) {
-            // Las estrellas cercanas tienen forma de cruz
             val arm = radius * (2f + shine * 2f)
             drawLine(color, Offset(x - arm, y), Offset(x + arm, y), density * 0.9f, StrokeCap.Round)
             drawLine(color, Offset(x, y - arm), Offset(x, y + arm), density * 0.9f, StrokeCap.Round)
@@ -182,7 +163,6 @@ private fun DrawScope.drawPlanet() {
     }
     clipPath(disc) {
         drawRect(Bermellon)
-        // Franjas planas del planeta
         rotate(-18f, center) {
             drawRect(
                 FranjaPlaneta,
@@ -200,7 +180,6 @@ private fun DrawScope.drawPlanet() {
                 Size(size.width, radius * 0.34f)
             )
         }
-        // Sombra en forma de media luna
         drawCircle(
             Color(0x66140A2E),
             radius * 1.25f,

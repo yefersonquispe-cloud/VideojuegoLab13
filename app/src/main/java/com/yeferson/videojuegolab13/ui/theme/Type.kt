@@ -8,7 +8,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Fuente condensada del sistema, parecida a la de los carteles antiguos
 val FuenteCartel = FontFamily(
     Font(DeviceFontFamilyName("sans-serif-condensed"), FontWeight.Normal),
     Font(DeviceFontFamilyName("sans-serif-condensed"), FontWeight.Bold)

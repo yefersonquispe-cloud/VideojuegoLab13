@@ -4,7 +4,6 @@ import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.game.GamePhase
 import com.yeferson.videojuegolab13.game.MAX_HULL
 import com.yeferson.videojuegolab13.game.Meteor
-import com.yeferson.videojuegolab13.game.MeteorKind
 import com.yeferson.videojuegolab13.game.MeteorSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,7 +38,6 @@ class GameEngineTest {
         vx = 0f,
         vy = 0f,
         size = size,
-        kind = MeteorKind.ROCK,
         shape = 0,
         spin = 0f,
         color = 0,

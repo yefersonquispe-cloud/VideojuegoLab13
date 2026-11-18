@@ -86,7 +86,6 @@ fun GameOverlays(engine: GameEngine, modifier: Modifier = Modifier) {
         else -> OverlayKind.NONE
     }
 
-    // AnimatedContent cambia entre las pantallas del juego con tiempos personalizados
     AnimatedContent(
         targetState = kind,
         modifier = modifier.fillMaxSize(),
@@ -188,7 +187,6 @@ private fun HelpLine(text: String) {
     Text(text = text, style = MaterialTheme.typography.bodyLarge, color = Hueso)
 }
 
-// Las letras del título caen una por una con rebote
 @Composable
 private fun DroppingTitle(text: String, startDelay: Int, color: Color, fontSize: TextUnit) {
     Row {
@@ -263,7 +261,6 @@ private fun PauseOverlay(engine: GameEngine) {
 
 @Composable
 private fun GameOverOverlay(engine: GameEngine) {
-    // Los resultados suben desde cero al aparecer la pantalla
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val shownScore by animateIntAsState(

@@ -23,7 +23,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Oculta las barras del sistema y evita que la pantalla se apague mientras se juega
     private fun activarPantallaCompleta() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.getInsetsController(window, window.decorView).apply {

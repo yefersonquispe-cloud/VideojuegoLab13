@@ -21,7 +21,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -33,7 +32,6 @@ import androidx.compose.ui.graphics.toArgb
 import com.yeferson.videojuegolab13.game.FLOATING_TEXT_LIFE
 import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.game.Meteor
-import com.yeferson.videojuegolab13.game.MeteorKind
 import com.yeferson.videojuegolab13.game.PowerUp
 import com.yeferson.videojuegolab13.game.PowerUpType
 import com.yeferson.videojuegolab13.ui.theme.Bermellon
@@ -53,7 +51,6 @@ private enum class ShipMood { NORMAL, SHIELDED, POWERED, CRITICAL }
 
 private class Crater(val center: Offset, val radius: Float)
 
-// Figuras que se crean una sola vez y se reutilizan en cada fotograma
 private class WorldArt {
     val meteorShapes: List<Path>
     val meteorCraters: List<List<Crater>>
@@ -125,12 +122,6 @@ private class WorldArt {
         lineTo(0f, 1f)
         close()
     }
-    val warningMark = Path().apply {
-        moveTo(0f, -11f)
-        lineTo(11f, 9f)
-        lineTo(-11f, 9f)
-        close()
-    }
     val shieldIcon = Path().apply {
         moveTo(0f, -9f)
         lineTo(8f, -6f)
@@ -140,14 +131,6 @@ private class WorldArt {
         lineTo(-8f, -6f)
         close()
     }
-    val hourglassIcon = Path().apply {
-        moveTo(-7f, -9f)
-        lineTo(7f, -9f)
-        lineTo(-7f, 9f)
-        lineTo(7f, 9f)
-        close()
-    }
-    val warningDash = PathEffect.dashPathEffect(floatArrayOf(6f, 10f))
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         textSize = 17f
@@ -159,7 +142,6 @@ private class WorldArt {
 fun GameWorld(engine: GameEngine, modifier: Modifier = Modifier) {
     val art = remember { WorldArt() }
 
-    // La llama del motor cambia de largo sin detenerse
     val flameLength by rememberInfiniteTransition(label = "motor").animateFloat(
         initialValue = 14f,
         targetValue = 30f,
@@ -170,7 +152,6 @@ fun GameWorld(engine: GameEngine, modifier: Modifier = Modifier) {
         label = "llama"
     )
 
-    // updateTransition coordina varias propiedades de la nave con un solo estado
     val mood = when {
         engine.hasShield -> ShipMood.SHIELDED
         engine.activePower == PowerUpType.TRIPLE -> ShipMood.POWERED
@@ -212,10 +193,8 @@ fun GameWorld(engine: GameEngine, modifier: Modifier = Modifier) {
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        // Leer frame hace que el Canvas se redibuje sin recomponer la pantalla
         engine.frame
         scale(density, density, Offset.Zero) {
-            drawWarnings(engine, art)
             engine.powerUps.forEach { drawPowerUp(it, art) }
             engine.meteors.forEach { drawMeteor(it, art) }
             drawBullets(engine)
@@ -245,7 +224,6 @@ private fun DrawScope.drawShip(
     flameLength: Float,
     shipScale: Float
 ) {
-    // Parpadea mientras la nave es invulnerable después de un impacto
     if (engine.invulnerableTime > 0f && sin(engine.clock * 34f) > 0.2f) return
 
     withTransform({
@@ -279,9 +257,6 @@ private fun DrawScope.drawShip(
 
 private fun DrawScope.drawMeteor(meteor: Meteor, art: WorldArt) {
     val shape = art.meteorShapes[meteor.shape]
-    if (meteor.kind == MeteorKind.MAGMA) {
-        drawCircle(Bermellon.copy(alpha = 0.28f), meteor.radius * 1.8f, Offset(meteor.x, meteor.y))
-    }
     withTransform({
         translate(meteor.x, meteor.y)
         rotate(meteor.rotation, Offset.Zero)
@@ -349,7 +324,6 @@ private fun DrawScope.drawPowerUp(powerUp: PowerUp, art: WorldArt) {
     val color = when (powerUp.type) {
         PowerUpType.SHIELD -> Turquesa
         PowerUpType.TRIPLE -> Mostaza
-        PowerUpType.SLOW -> Hueso
     }
     withTransform({
         translate(powerUp.x, powerUp.y)
@@ -362,25 +336,6 @@ private fun DrawScope.drawPowerUp(powerUp: PowerUp, art: WorldArt) {
             PowerUpType.TRIPLE -> for (side in -1..1) {
                 drawLine(Noche, Offset(side * 6f, 8f), Offset(side * 6f, -8f), 3.4f, StrokeCap.Round)
             }
-            PowerUpType.SLOW -> drawPath(art.hourglassIcon, Noche)
-        }
-    }
-}
-
-private fun DrawScope.drawWarnings(engine: GameEngine, art: WorldArt) {
-    if (sin(engine.clock * 20f) < -0.25f) return
-    engine.warnings.forEach { warning ->
-        drawLine(
-            color = Bermellon.copy(alpha = 0.7f),
-            start = Offset(warning.x, 66f),
-            end = Offset(warning.x, engine.worldHeight * 0.4f),
-            strokeWidth = 2.5f,
-            pathEffect = art.warningDash
-        )
-        withTransform({ translate(warning.x, 50f) }) {
-            drawPath(art.warningMark, Bermellon)
-            drawLine(Hueso, Offset(0f, -4f), Offset(0f, 2f), 2.4f, StrokeCap.Round)
-            drawCircle(Hueso, 1.4f, Offset(0f, 6f))
         }
     }
 }

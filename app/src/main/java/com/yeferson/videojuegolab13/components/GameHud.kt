@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.game.GamePhase
 import com.yeferson.videojuegolab13.game.MAX_HULL
-import com.yeferson.videojuegolab13.game.sectorAt
 import com.yeferson.videojuegolab13.ui.theme.Bermellon
 import com.yeferson.videojuegolab13.ui.theme.Hueso
 import com.yeferson.videojuegolab13.ui.theme.Mostaza
@@ -71,7 +70,6 @@ fun GameHud(engine: GameEngine, modifier: Modifier = Modifier) {
         engine.phase == GamePhase.PLAYING ||
         engine.phase == GamePhase.PAUSED
 
-    // El panel entra desde fuera de la pantalla usando offset
     val topOffset by animateDpAsState(
         targetValue = if (visible) 0.dp else (-170).dp,
         animationSpec = spring(
@@ -117,11 +115,6 @@ fun GameHud(engine: GameEngine, modifier: Modifier = Modifier) {
                     Spacer(Modifier.width(12.dp))
                     PauseButton(onClick = engine::pause)
                 }
-                Text(
-                    text = sectorAt(engine.sectorIndex).name,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Hueso.copy(alpha = 0.8f)
-                )
             }
         }
 
@@ -139,7 +132,6 @@ fun GameHud(engine: GameEngine, modifier: Modifier = Modifier) {
 fun formatTime(seconds: Int): String =
     "%d:%02d".format(seconds / 60, seconds % 60)
 
-// Cada dígito del puntaje sube como en un contador mecánico
 @Composable
 private fun RollingScore(score: Int) {
     Row {
@@ -174,7 +166,6 @@ private fun HullBar(hull: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         repeat(MAX_HULL) { index ->
             val active = index < hull
-            // Color con spring y ancho con animateDpAsState al perder una vida
             val color by animateColorAsState(
                 targetValue = if (active) activeColor else Hueso.copy(alpha = 0.2f),
                 animationSpec = spring(stiffness = Spring.StiffnessLow),

@@ -15,7 +15,6 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 const val MAX_HULL = 3
-const val SECTOR_SECONDS = 20
 const val SHIP_RADIUS = 14f
 
 private const val MAX_STEP = 0.05f
@@ -23,12 +22,7 @@ private const val COUNTDOWN_STEP = 0.8f
 private const val GO_TIME = 0.6f
 private const val DESTROYED_TIME = 1.7f
 private const val HIT_INVULNERABLE = 1.8f
-private const val SLOW_FACTOR = 0.45f
 private const val TRIPLE_TIME = 8f
-private const val SLOW_TIME = 5f
-private const val COMBO_WINDOW = 2.5f
-private const val COMBO_STEP = 5
-private const val MAX_COMBO = 5
 private const val BULLET_SPEED = 640f
 private const val PULSE_SPEED = 760f
 private const val MAX_PARTICLES = 260
@@ -38,19 +32,15 @@ private const val COLOR_BONE = 0xFFF2E6C9.toInt()
 private const val COLOR_MUSTARD = 0xFFF5B82E.toInt()
 private const val COLOR_VERMILION = 0xFFF0452B.toInt()
 private const val COLOR_TURQUOISE = 0xFF37C8B8.toInt()
+private const val COLOR_ROCK = 0xFFB9A58A.toInt()
+private const val COLOR_ROCK_SHADOW = 0xFF6F5B52.toInt()
 
-/**
- * Lógica del videojuego. Trabaja en unidades dp y no dibuja nada:
- * la interfaz solo lee sus valores en cada fotograma.
- */
 class GameEngine(private val random: Random = Random.Default) {
-
     var worldWidth = 400f
         private set
     var worldHeight = 800f
         private set
 
-    // Valores observados por la interfaz
     var phase by mutableStateOf(GamePhase.MENU)
         private set
     var countdown by mutableIntStateOf(3)
@@ -65,12 +55,6 @@ class GameEngine(private val random: Random = Random.Default) {
         private set
     var secondsSurvived by mutableIntStateOf(0)
         private set
-    var sectorIndex by mutableIntStateOf(0)
-        private set
-    var sectorBannerVisible by mutableStateOf(false)
-        private set
-    var combo by mutableIntStateOf(1)
-        private set
     var meteorsDestroyed by mutableIntStateOf(0)
         private set
     var pulseCharge by mutableFloatStateOf(0f)
@@ -82,7 +66,6 @@ class GameEngine(private val random: Random = Random.Default) {
     var powerFraction by mutableFloatStateOf(0f)
         private set
 
-    // Contadores que avisan a la interfaz para lanzar sus efectos
     var hitEvents by mutableIntStateOf(0)
         private set
     var shieldEvents by mutableIntStateOf(0)
@@ -92,20 +75,16 @@ class GameEngine(private val random: Random = Random.Default) {
     var pickupEvents by mutableIntStateOf(0)
         private set
 
-    // Cambia en cada fotograma para que el Canvas se vuelva a dibujar
     var frame by mutableLongStateOf(0L)
         private set
 
-    // Objetos del mundo
     val meteors = ArrayList<Meteor>()
     val bullets = ArrayList<Bullet>()
     val particles = ArrayList<Particle>()
     val waves = ArrayList<Shockwave>()
     val powerUps = ArrayList<PowerUp>()
     val texts = ArrayList<FloatingText>()
-    val warnings = ArrayList<MagmaWarning>()
 
-    // Nave
     var shipX = 200f
         private set
     var shipY = 500f
@@ -117,7 +96,6 @@ class GameEngine(private val random: Random = Random.Default) {
     var invulnerableTime = 0f
         private set
 
-    // Pulso de energía
     var pulseRadius = -1f
         private set
     var pulseX = 0f
@@ -137,14 +115,10 @@ class GameEngine(private val random: Random = Random.Default) {
     private var elapsed = 0f
     private var countdownTime = 0f
     private var destroyedTime = 0f
-    private var bannerTime = 0f
     private var spawnTimer = 0f
-    private var magmaTimer = 0f
     private var powerUpTimer = 0f
     private var fireTimer = 0f
     private var exhaustTimer = 0f
-    private var comboTimer = 0f
-    private var killStreak = 0
     private var powerTime = 0f
     private var powerDuration = 1f
     private var charge = 0f
@@ -169,10 +143,6 @@ class GameEngine(private val random: Random = Random.Default) {
         score = 0
         hull = MAX_HULL
         secondsSurvived = 0
-        sectorIndex = 0
-        combo = 1
-        killStreak = 0
-        comboTimer = 0f
         meteorsDestroyed = 0
         charge = 0f
         pulseCharge = 0f
@@ -184,11 +154,8 @@ class GameEngine(private val random: Random = Random.Default) {
         invulnerableTime = 0f
         shipVisible = true
         spawnTimer = 0.8f
-        magmaTimer = 7f
         powerUpTimer = 8f
         fireTimer = 0f
-        bannerTime = 0f
-        sectorBannerVisible = false
         targetX = worldWidth / 2f
         targetY = worldHeight * 0.72f
         countdownTime = COUNTDOWN_STEP * 3 + GO_TIME
@@ -208,8 +175,6 @@ class GameEngine(private val random: Random = Random.Default) {
         clearWorld()
         shipVisible = true
         hull = MAX_HULL
-        sectorIndex = 0
-        sectorBannerVisible = false
         activePower = null
         hasShield = false
         placeShipForMenu()
@@ -231,12 +196,10 @@ class GameEngine(private val random: Random = Random.Default) {
         pulseX = shipX
         pulseY = shipY
         invulnerableTime = maxOf(invulnerableTime, 0.9f)
-        warnings.clear()
         pulseEvents++
         return true
     }
 
-    /** Avanza la simulación. Se llama una vez por fotograma. */
     fun step(deltaSeconds: Float) {
         if (phase == GamePhase.PAUSED) return
         val dt = deltaSeconds.coerceIn(0f, MAX_STEP)
@@ -259,7 +222,7 @@ class GameEngine(private val random: Random = Random.Default) {
         val target = when (phase) {
             GamePhase.MENU -> 24f
             GamePhase.COUNTDOWN -> 520f
-            GamePhase.PLAYING -> 110f + sectorIndex * 22f
+            GamePhase.PLAYING -> 110f
             else -> 40f
         }
         scrollSpeed += (target - scrollSpeed) * (1f - exp(-2.5f * dt))
@@ -278,22 +241,20 @@ class GameEngine(private val random: Random = Random.Default) {
         }
         if (countdownTime <= 0f) {
             phase = GamePhase.PLAYING
-            showSectorBanner()
         }
     }
 
     private fun updatePlaying(dt: Float) {
         elapsed += dt
-        val worldDt = if (activePower == PowerUpType.SLOW) dt * SLOW_FACTOR else dt
         updateProgress()
         updateTimers(dt)
         updateShip(dt, 18f)
         emitExhaust(dt)
         updateFire(dt)
-        updateSpawns(worldDt)
+        updateSpawns(dt)
         updateBullets(dt)
-        updateMeteors(worldDt)
-        updatePowerUps(worldDt)
+        updateMeteors(dt)
+        updatePowerUps(dt)
         updatePulse(dt)
         resolveBulletHits()
         resolveShipHits()
@@ -322,28 +283,10 @@ class GameEngine(private val random: Random = Random.Default) {
             secondsSurvived = seconds
             score += 5
         }
-        val sector = seconds / SECTOR_SECONDS
-        if (sector != sectorIndex) {
-            sectorIndex = sector
-            showSectorBanner()
-        }
-    }
-
-    private fun showSectorBanner() {
-        sectorBannerVisible = true
-        bannerTime = 2.6f
     }
 
     private fun updateTimers(dt: Float) {
         invulnerableTime = (invulnerableTime - dt).coerceAtLeast(0f)
-        if (bannerTime > 0f) {
-            bannerTime -= dt
-            if (bannerTime <= 0f) sectorBannerVisible = false
-        }
-        if (comboTimer > 0f) {
-            comboTimer -= dt
-            if (comboTimer <= 0f) resetCombo()
-        }
         if (activePower != null) {
             powerTime -= dt
             val fraction = (powerTime / powerDuration).coerceIn(0f, 1f)
@@ -359,12 +302,6 @@ class GameEngine(private val random: Random = Random.Default) {
     private fun addCharge(amount: Float) {
         charge = (charge + amount).coerceAtMost(1f)
         if (charge == 1f || abs(charge - pulseCharge) > 0.01f) pulseCharge = charge
-    }
-
-    private fun resetCombo() {
-        killStreak = 0
-        combo = 1
-        comboTimer = 0f
     }
 
     private fun updateShip(dt: Float, follow: Float) {
@@ -409,23 +346,6 @@ class GameEngine(private val random: Random = Random.Default) {
             spawnTimer = interval * randomBetween(0.8f, 1.2f)
         }
 
-        if (sectorIndex >= 1) {
-            magmaTimer -= dt
-            if (magmaTimer <= 0f) {
-                warnings.add(MagmaWarning(randomBetween(30f, worldWidth - 30f)))
-                magmaTimer = randomBetween(5f, 8f)
-            }
-        }
-        val iterator = warnings.iterator()
-        while (iterator.hasNext()) {
-            val warning = iterator.next()
-            warning.timeLeft -= dt
-            if (warning.timeLeft <= 0f) {
-                spawnMagma(warning.x)
-                iterator.remove()
-            }
-        }
-
         powerUpTimer -= dt
         if (powerUpTimer <= 0f) {
             spawnPowerUp(randomBetween(40f, worldWidth - 40f), -24f)
@@ -452,24 +372,7 @@ class GameEngine(private val random: Random = Random.Default) {
                 y = -size.radius - 10f,
                 vx = randomBetween(-30f, 30f),
                 vy = randomBetween(130f, 190f) * speedScale * sizeScale,
-                size = size,
-                kind = MeteorKind.ROCK
-            )
-        )
-    }
-
-    private fun spawnMagma(x: Float) {
-        val startY = -30f
-        val distance = hypot(shipX - x, shipY - startY).coerceAtLeast(1f)
-        val speed = 340f
-        meteors.add(
-            createMeteor(
-                x = x,
-                y = startY,
-                vx = (shipX - x) / distance * speed,
-                vy = (shipY - startY) / distance * speed,
-                size = MeteorSize.SMALL,
-                kind = MeteorKind.MAGMA
+                size = size
             )
         )
     }
@@ -479,21 +382,18 @@ class GameEngine(private val random: Random = Random.Default) {
         y: Float,
         vx: Float,
         vy: Float,
-        size: MeteorSize,
-        kind: MeteorKind
+        size: MeteorSize
     ): Meteor {
-        val sector = sectorAt(sectorIndex)
         return Meteor(
             x = x,
             y = y,
             vx = vx,
             vy = vy,
             size = size,
-            kind = kind,
             shape = random.nextInt(METEOR_SHAPES),
             spin = randomBetween(-160f, 160f),
-            color = if (kind == MeteorKind.MAGMA) COLOR_MUSTARD else sector.rock,
-            shadow = if (kind == MeteorKind.MAGMA) COLOR_VERMILION else sector.rockShadow
+            color = COLOR_ROCK,
+            shadow = COLOR_ROCK_SHADOW
         )
     }
 
@@ -520,12 +420,6 @@ class GameEngine(private val random: Random = Random.Default) {
             meteor.y += meteor.vy * dt
             meteor.rotation += meteor.spin * dt
             meteor.hitFlash = (meteor.hitFlash - dt * 6f).coerceAtLeast(0f)
-            if (meteor.kind == MeteorKind.MAGMA && random.nextFloat() < 0.6f) {
-                addParticle(
-                    meteor.x, meteor.y, randomBetween(-20f, 20f), randomBetween(-40f, 10f),
-                    randomBetween(0.25f, 0.5f), randomBetween(2.5f, 5f), COLOR_VERMILION
-                )
-            }
             val outside = meteor.y > worldHeight + meteor.radius + 20f ||
                 meteor.x < -meteor.radius - 60f || meteor.x > worldWidth + meteor.radius + 60f
             if (outside) iterator.remove()
@@ -559,10 +453,6 @@ class GameEngine(private val random: Random = Random.Default) {
             PowerUpType.TRIPLE -> {
                 startPower(PowerUpType.TRIPLE, TRIPLE_TIME)
                 addText(shipX, shipY - 44f, "Disparo triple", COLOR_MUSTARD)
-            }
-            PowerUpType.SLOW -> {
-                startPower(PowerUpType.SLOW, SLOW_TIME)
-                addText(shipX, shipY - 44f, "Tiempo lento", COLOR_BONE)
             }
         }
     }
@@ -629,7 +519,6 @@ class GameEngine(private val random: Random = Random.Default) {
     }
 
     private fun damageShip() {
-        resetCombo()
         if (hasShield) {
             hasShield = false
             invulnerableTime = 1f
@@ -648,7 +537,6 @@ class GameEngine(private val random: Random = Random.Default) {
         shipVisible = false
         activePower = null
         powerFraction = 0f
-        sectorBannerVisible = false
         pulseRadius = -1f
         destroyedTime = DESTROYED_TIME
         burst(shipX, shipY, 46, 300f, COLOR_MUSTARD)
@@ -661,17 +549,14 @@ class GameEngine(private val random: Random = Random.Default) {
 
     private fun destroyMeteor(meteor: Meteor, split: Boolean) {
         meteorsDestroyed++
-        killStreak++
-        combo = (1 + killStreak / COMBO_STEP).coerceAtMost(MAX_COMBO)
-        comboTimer = COMBO_WINDOW
-        val gained = meteor.size.points * combo
+        val gained = meteor.size.points
         score += gained
         addCharge(meteor.size.charge)
         addText(meteor.x, meteor.y, "+$gained", COLOR_BONE)
         burst(meteor.x, meteor.y, (meteor.radius * 0.7f).toInt() + 5, 170f, meteor.color)
         waves.add(Shockwave(meteor.x, meteor.y, meteor.radius * 2.2f, 0.35f, COLOR_BONE))
 
-        if (split && meteor.kind == MeteorKind.ROCK) splitMeteor(meteor)
+        if (split) splitMeteor(meteor)
         val dropChance = when (meteor.size) {
             MeteorSize.SMALL -> 0f
             MeteorSize.MEDIUM -> 0.08f
@@ -693,8 +578,7 @@ class GameEngine(private val random: Random = Random.Default) {
                     y = meteor.y,
                     vx = meteor.vx + side * randomBetween(50f, 95f),
                     vy = meteor.vy * randomBetween(0.9f, 1.15f),
-                    size = smaller,
-                    kind = MeteorKind.ROCK
+                    size = smaller
                 )
             )
         }
@@ -762,7 +646,6 @@ class GameEngine(private val random: Random = Random.Default) {
         waves.clear()
         powerUps.clear()
         texts.clear()
-        warnings.clear()
         pulseRadius = -1f
     }
 
@@ -782,7 +665,6 @@ class GameEngine(private val random: Random = Random.Default) {
     private fun randomBetween(min: Float, max: Float): Float =
         min + random.nextFloat() * (max - min)
 
-    // Permiten preparar situaciones exactas en las pruebas unitarias
     internal fun addMeteorForTest(meteor: Meteor) {
         meteors.add(meteor)
     }
