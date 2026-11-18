@@ -8,8 +8,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import com.yeferson.videojuegolab13.components.GameWorld
 import com.yeferson.videojuegolab13.components.SpaceBackground
 import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.ui.theme.Noche
@@ -35,7 +38,21 @@ fun GameScreen() {
             .fillMaxSize()
             .background(Noche)
             .onSizeChanged { engine.resize(it.width / density, it.height / density) }
+            .pointerInput(engine) {
+                // La nave sigue al dedo que más se mueve, incluso al tocar otro botón
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val drag = event.changes
+                            .filter { it.pressed && it.previousPressed }
+                            .maxByOrNull { it.positionChangeIgnoreConsumed().getDistanceSquared() }
+                            ?.positionChangeIgnoreConsumed()
+                        if (drag != null) engine.moveShipBy(drag.x / density, drag.y / density)
+                    }
+                }
+            }
     ) {
         SpaceBackground(engine = engine)
+        GameWorld(engine = engine)
     }
 }
