@@ -10,6 +10,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import com.yeferson.videojuegolab13.components.SpaceBackground
 import com.yeferson.videojuegolab13.game.GameEngine
 import com.yeferson.videojuegolab13.ui.theme.Noche
 
@@ -34,5 +35,7 @@ fun GameScreen() {
             .fillMaxSize()
             .background(Noche)
             .onSizeChanged { engine.resize(it.width / density, it.height / density) }
-    )
+    ) {
+        SpaceBackground(engine = engine)
+    }
 }
