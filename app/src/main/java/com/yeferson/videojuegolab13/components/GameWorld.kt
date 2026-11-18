@@ -2,12 +2,15 @@ package com.yeferson.videojuegolab13.components
 
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -45,6 +48,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 private val HuesoSombra = Color(0xFFCDBD9C)
+
+private enum class ShipMood { NORMAL, SHIELDED, POWERED, CRITICAL }
 
 private class Crater(val center: Offset, val radius: Float)
 
@@ -165,6 +170,47 @@ fun GameWorld(engine: GameEngine, modifier: Modifier = Modifier) {
         label = "llama"
     )
 
+    // updateTransition coordina varias propiedades de la nave con un solo estado
+    val mood = when {
+        engine.hasShield -> ShipMood.SHIELDED
+        engine.activePower == PowerUpType.TRIPLE -> ShipMood.POWERED
+        engine.hull == 1 -> ShipMood.CRITICAL
+        else -> ShipMood.NORMAL
+    }
+    val shipTransition = updateTransition(targetState = mood, label = "estadoNave")
+    val auraColor by shipTransition.animateColor(
+        transitionSpec = { tween(350) },
+        label = "colorAura"
+    ) { state ->
+        when (state) {
+            ShipMood.NORMAL -> Turquesa.copy(alpha = 0f)
+            ShipMood.SHIELDED -> Turquesa
+            ShipMood.POWERED -> Mostaza
+            ShipMood.CRITICAL -> Bermellon
+        }
+    }
+    val auraRadius by shipTransition.animateFloat(
+        transitionSpec = { spring(dampingRatio = 0.42f, stiffness = 280f) },
+        label = "radioAura"
+    ) { state ->
+        when (state) {
+            ShipMood.NORMAL -> 22f
+            ShipMood.SHIELDED -> 48f
+            ShipMood.POWERED -> 42f
+            ShipMood.CRITICAL -> 40f
+        }
+    }
+    val shipScale by shipTransition.animateFloat(
+        transitionSpec = { spring(dampingRatio = 0.5f, stiffness = 300f) },
+        label = "escalaNave"
+    ) { state ->
+        when (state) {
+            ShipMood.POWERED -> 1.16f
+            ShipMood.CRITICAL -> 0.92f
+            else -> 1f
+        }
+    }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         // Leer frame hace que el Canvas se redibuje sin recomponer la pantalla
         engine.frame
@@ -176,20 +222,36 @@ fun GameWorld(engine: GameEngine, modifier: Modifier = Modifier) {
             drawParticles(engine)
             drawWaves(engine)
             drawPulse(engine)
-            if (engine.shipVisible) drawShip(engine, art, flameLength)
+            if (engine.shipVisible) {
+                drawAura(engine, auraColor, auraRadius)
+                drawShip(engine, art, flameLength, shipScale)
+            }
             drawTexts(engine, art)
         }
     }
 }
 
-private fun DrawScope.drawShip(engine: GameEngine, art: WorldArt, flameLength: Float) {
+private fun DrawScope.drawAura(engine: GameEngine, color: Color, radius: Float) {
+    if (color.alpha <= 0.01f) return
+    val center = Offset(engine.shipX, engine.shipDrawY)
+    val beat = radius + sin(engine.clock * 6f) * 3f
+    drawCircle(color.copy(alpha = color.alpha * 0.16f), beat, center)
+    drawCircle(color.copy(alpha = color.alpha * 0.85f), beat, center, style = Stroke(width = 2.5f))
+}
+
+private fun DrawScope.drawShip(
+    engine: GameEngine,
+    art: WorldArt,
+    flameLength: Float,
+    shipScale: Float
+) {
     // Parpadea mientras la nave es invulnerable después de un impacto
     if (engine.invulnerableTime > 0f && sin(engine.clock * 34f) > 0.2f) return
 
     withTransform({
         translate(engine.shipX, engine.shipDrawY)
         rotate(engine.shipTilt * 16f, Offset.Zero)
-        scale(1f - abs(engine.shipTilt) * 0.14f, 1f, Offset.Zero)
+        scale((1f - abs(engine.shipTilt) * 0.14f) * shipScale, shipScale, Offset.Zero)
     }) {
         withTransform({
             translate(0f, 25f)
