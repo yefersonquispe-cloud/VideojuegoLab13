@@ -37,7 +37,6 @@ import com.yeferson.videojuegolab13.game.GamePhase
 import com.yeferson.videojuegolab13.game.sectorAt
 import com.yeferson.videojuegolab13.ui.theme.Bermellon
 import com.yeferson.videojuegolab13.ui.theme.Hueso
-import com.yeferson.videojuegolab13.ui.theme.Mostaza
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -45,6 +44,7 @@ import kotlin.random.Random
 
 private const val RAY_COUNT = 12
 private const val TWO_PI = 6.2832f
+private val FranjaPlaneta = Color(0xFFB02E22)
 
 private class Star(val x: Float, val y: Float, val layer: Int, val phase: Float)
 
@@ -185,7 +185,7 @@ private fun DrawScope.drawPlanet() {
         // Franjas planas del planeta
         rotate(-18f, center) {
             drawRect(
-                Mostaza,
+                FranjaPlaneta,
                 Offset(0f, center.y - radius * 0.62f),
                 Size(size.width, radius * 0.2f)
             )
@@ -195,7 +195,7 @@ private fun DrawScope.drawPlanet() {
                 Size(size.width, radius * 0.08f)
             )
             drawRect(
-                Mostaza,
+                FranjaPlaneta,
                 Offset(0f, center.y + radius * 0.12f),
                 Size(size.width, radius * 0.34f)
             )
