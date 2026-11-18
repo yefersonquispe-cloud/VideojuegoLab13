@@ -13,6 +13,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import com.yeferson.videojuegolab13.components.GameAlerts
 import com.yeferson.videojuegolab13.components.GameHud
 import com.yeferson.videojuegolab13.components.GameOverlays
 import com.yeferson.videojuegolab13.components.GameWorld
@@ -64,6 +65,7 @@ fun GameScreen() {
         SpaceBackground(engine = engine)
         GameWorld(engine = engine)
         GameHud(engine = engine)
+        GameAlerts(engine = engine)
         GameOverlays(engine = engine)
     }
 }
